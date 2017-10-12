@@ -31,6 +31,8 @@
     "node-telegram-bot-api": "^0.28.0",
     "nodemon": "^1.12.1",
     "redis": "^2.8.0",
+    "superagent": "^3.6.3",
+    "telegraf": "^3.13.0",
     "ts-node": "^3.3.0",
     "tslint": "^5.7.0",
     "tslint-config-airbnb": "^5.3.0",
@@ -40,7 +42,7 @@
     "flow-bin": "^0.54.1"
   },
   "scripts": {
-    "server": "nodemon --watch src src/index.ts --exec babel-node --presets es2015,stage-0",
+    "server": "nodemon --watch src src/index.ts --exec ts-node",
     "ts": "nodemon --watch src src/index.ts --exec ts-node"
   },
   "repository": {
