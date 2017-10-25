@@ -93,6 +93,7 @@ async function parseMessage(msg) {
   const vals = ['d', 'm', 'y'];
   const parents = ['from', 'to'];
   console.log(`msg itself is`, msg, `splitted and shifted`.magenta, splitted);
+  const formatYear = year => year.length === 2 ? `20${year}` : year;
   if (
     splitted.length === 2 &&
     moment(splitted[0], 'DD.MM.YYYY').isValid() &&
@@ -100,9 +101,7 @@ async function parseMessage(msg) {
   ) {
     for (let i = 0; i < 2; i = i + 1) {
       const date = splitted[i].split('.');
-      if (date[2].length === 2) {
-        date[2] = `20${date[2]}`;
-      }
+      date[2] = formatYear(date[2]);
       console.log(`date is ${date}, i is ${i}`)
       console.log(`i is ${i}, adding period.${parents[i]} = ${date}`)
       for (let n = 0; n < 3; n = n + 1) {
@@ -111,9 +110,14 @@ async function parseMessage(msg) {
     }
     console.log(`period`, period);
     return period;
-  } else if (splitted.length === 1 && moment.isDate(splitted[0])) {
+  } else if (splitted.length === 1 && moment(splitted[0], 'DD.MM.YYYY').isValid()) {
+    console.log(`splitted?`.magenta, splitted[0])
+    const date = splitted[0].split('.');
     for (let n = 0; n < 3; n = n + 1) {
-      const date = splitted[n].split('.');
+      if (n === 2) {
+        date[n] = formatYear(date[n]);
+        console.log(`date[n] is ${date[n]}`.red)
+      }
       _.set(period, [parents[0], vals[n]], date[n]);
     }
 
@@ -122,6 +126,18 @@ async function parseMessage(msg) {
   }
   console.log(`no date provided.`)
   return false;
+}
+
+async function postRequest(path, data) {
+  try {
+    const result = await request
+      .post(path)
+      .send(data);
+    return result;
+  } catch (e) {
+    console.log(`error`, e, !!e);
+    return { status: 'ERROR', message: e };
+  }
 }
 
 async function getStats(data: IMessage) {
@@ -135,30 +151,29 @@ async function getStats(data: IMessage) {
   } else {
     console.log(`sending, period is`, period);
   }
-  const res = await request
-    .post(`${config.url}/stats/get`)
-    .send({
-      period,
-      name: username,
-    });
-  const { status, data: stats, name } = res.body;
-  const mapped = [];
-  _.forEach(stats, (year) => {
-    _.forEach(year, (month) => {
-      _.forEach(month, (day) => {
-        return mapped.push(_.values(day));
-      });
-    });
-  });
-  const flattened = _.flatten(mapped);
-  // console.log(`flattened`, flattened);
-  const ordered = _.orderBy(flattened, ['date'], ['asc']);
-  // console.log(`ordered`, ordered);
+  const res = await postRequest(`${config.url}/stats/get`, { period, name: username });
+  if (res.status === 'ERROR') {
+    return data.reply(`${res.status}: ${res.message}`)
+  }
+  const { status, data: stats, name, message } = res.body;
+  console.log(`stats`.bgGreen, stats)
+  if (status === 'ERROR') {
+    return data.reply(`${status}:\n${message}`);
+  }
+  const ordered = _.orderBy(stats, ['date'], ['asc']);
+  console.log(`ordered`, ordered);
   const stringified = ordered.map((i: IOutcome) => {
     return `${moment(i.date).format('DD.MM.YY HH:mm:ss')}: ${i.sum} RUB: ${i.comment}\n`;
   }).join('');
+  const { to, from } = period;
+  const dateType = {
+    name: () => period.to ? 'period' : 'date',
+    string: () => period.to ?
+      `${from.d}.${from.m}.${from.y} - ${to.d}.${to.m}.${to.y}` :
+      `${from.d}.${from.m}.${from.y}`,
+  }
   // console.log(`stringified stats`, mapped);
-  data.reply(`${status}> Stats by TODAY for ${name}:\n${!_.isEmpty(ordered) ? stringified : 'No data for this period'}`);
+  data.reply(`${status}:\nStats by ${dateType.name()} ${dateType.string()} for ${name}:\n${!_.isEmpty(ordered) ? stringified : 'No data for this period'}`);
   console.log(`is empty?`, _.isEmpty(stats), `response is`, stats);
 }
 
