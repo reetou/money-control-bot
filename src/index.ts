@@ -56,7 +56,6 @@ async function registerUser(data: IRegisterUser) {
 
 async function start(data: IMessage) {
   console.log(`data received from msg`, data.message);
-  // console.log(`date.date is ${data.date}`, moment.unix(data.date).format('DD.MM.YYYY HH:mm:ss'));
   const { id, username } = data.message.from;
   const result = await registerUser({ name: username, telegramId: id });
   await data.reply(`${result.status}: ${result.message}`);
@@ -96,7 +95,7 @@ async function parseMessage(msg) {
   const formatYear = year => year.length === 2 ? `20${year}` : year;
   const isDateValid = date => moment(date, 'DD.MM.YYYY').isValid();
   if (splitted.length === 2
-    // && isDateValid(splitted[0]) && isDateValid(splitted[1])
+    && isDateValid(splitted[0]) && isDateValid(splitted[1])
   ) {
     const firstDate = splitted[0].split('.');
     const secondDate = splitted[1].split('.');
@@ -117,7 +116,7 @@ async function parseMessage(msg) {
     console.log(`period`, period);
     return period;
   } else if (splitted.length === 1
-    // && moment(splitted[0], 'DD.MM.YYYY').isValid()
+    && moment(splitted[0], 'DD.MM.YYYY').isValid()
   ) {
     console.log(`splitted?`.magenta, splitted[0]);
     const firstDate = splitted[0].split('.');
@@ -158,11 +157,11 @@ async function getStats(data: IMessage) {
   const { text } = data.message;
   const period: IPeriod = await parseMessage(text);
   console.log(`period at getstats`, period);
-  // if (!period) {
-  //   console.log(`not sending!`.red);
-  //   data.reply(`ERROR:\nCannot parse data from message.`);
-  //   return false;
-  // }
+  if (!period) {
+    console.log(`not sending!`.red);
+    data.reply(`ERROR:\nCannot parse data from message.`);
+    return false;
+  }
   const res = await postRequest(`${config.url}/stats/get`, { period, name: username });
   if (res.status === 'ERROR') {
     return data.reply(`${res.status}res.status: ${res.message}`);
@@ -184,7 +183,6 @@ async function getStats(data: IMessage) {
       `${from.d}.${from.m}.${from.y} - ${to.d}.${to.m}.${to.y}` :
       `${from.d}.${from.m}.${from.y}`,
   }
-  // console.log(`stringified stats`, mapped);
   data.reply(`${status}:\nStats by ${dateType.name()} ${dateType.string()} for ${name}:\n${!_.isEmpty(ordered) ? stringified : 'No data for this period'}`);
   console.log(`is empty?`, _.isEmpty(stats), `response is`, stats);
 }
