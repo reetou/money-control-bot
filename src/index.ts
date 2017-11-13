@@ -94,13 +94,19 @@ async function parseMessage(msg) {
   const parents = ['from', 'to'];
   console.log(`msg itself is`, msg, `splitted and shifted`.magenta, splitted);
   const formatYear = year => year.length === 2 ? `20${year}` : year;
-  if (
-    splitted.length === 2 &&
-    moment(splitted[0], 'DD.MM.YYYY').isValid() &&
-    moment(splitted[1], 'DD.MM.YYYY').isValid()
+  const isDateValid = date => moment(date, 'DD.MM.YYYY').isValid();
+  if (splitted.length === 2
+    // && isDateValid(splitted[0]) && isDateValid(splitted[1])
   ) {
+    const firstDate = splitted[0].split('.');
+    const secondDate = splitted[1].split('.');
+    if (firstDate.length !== 3 || secondDate.length !== 3) {
+      console.log(`firstDate is`.red, firstDate, `secondDate is`.red, secondDate);
+      return false;
+    }
     for (let i = 0; i < 2; i = i + 1) {
       const date = splitted[i].split('.');
+      console.log(`date[2]?`.red, date[2]);
       date[2] = formatYear(date[2]);
       console.log(`date is ${date}, i is ${i}`)
       console.log(`i is ${i}, adding period.${parents[i]} = ${date}`)
@@ -110,8 +116,15 @@ async function parseMessage(msg) {
     }
     console.log(`period`, period);
     return period;
-  } else if (splitted.length === 1 && moment(splitted[0], 'DD.MM.YYYY').isValid()) {
-    console.log(`splitted?`.magenta, splitted[0])
+  } else if (splitted.length === 1
+    // && moment(splitted[0], 'DD.MM.YYYY').isValid()
+  ) {
+    console.log(`splitted?`.magenta, splitted[0]);
+    const firstDate = splitted[0].split('.');
+    if (firstDate.length !== 3) {
+      console.log(`firstDate is`.red, firstDate);
+      return false;
+    }
     const date = splitted[0].split('.');
     for (let n = 0; n < 3; n = n + 1) {
       if (n === 2) {
@@ -145,15 +158,14 @@ async function getStats(data: IMessage) {
   const { text } = data.message;
   const period: IPeriod = await parseMessage(text);
   console.log(`period at getstats`, period);
-  if (!period) {
-    console.log(`not sending!`.red);
-    return false;
-  } else {
-    console.log(`sending, period is`, period);
-  }
+  // if (!period) {
+  //   console.log(`not sending!`.red);
+  //   data.reply(`ERROR:\nCannot parse data from message.`);
+  //   return false;
+  // }
   const res = await postRequest(`${config.url}/stats/get`, { period, name: username });
   if (res.status === 'ERROR') {
-    return data.reply(`${res.status}: ${res.message}`)
+    return data.reply(`${res.status}res.status: ${res.message}`);
   }
   const { status, data: stats, name, message } = res.body;
   console.log(`stats`.bgGreen, stats)
