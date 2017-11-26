@@ -1,12 +1,20 @@
 import 'colors';
 import * as moment from 'moment';
-import * as telegraf from 'telegraf';
+import * as Telegraf from 'telegraf';
 import * as request from 'superagent';
 import * as _ from 'lodash';
+import * as envalid from 'envalid';
 
+require('dotenv').config();
+const { str, url } = envalid;
+const env = envalid.cleanEnv(process.env, {
+  TELEGRAM_TOKEN: str(),
+  API_URL: url(),
+});
+
+const { TELEGRAM_TOKEN, API_URL } = env;
 // constants
-const config = require('../config.json');
-const bot = new telegraf(config.tgToken);
+const bot = new Telegraf(TELEGRAM_TOKEN);
 
 console.log(`Initializing bot`.magenta);
 
@@ -48,7 +56,7 @@ interface IPeriod {
 
 async function registerUser(data: IRegisterUser) {
   const res = await request
-    .post(`${config.url}/create`)
+    .post(`${API_URL}/create`)
     .send(data); // sends a JSON post body
   console.log(`response is`, res.body);
   return res.body;
@@ -64,7 +72,7 @@ async function start(data: IMessage) {
 async function writeOutcome(outcome: IOutcome) {
   const { sum, comment, name } = outcome;
   const res = await request
-    .post(`${config.url}/stats/add`)
+    .post(`${API_URL}/stats/add`)
     .send({ name, sum, comment });
   console.log(`response at outcome is`, res.body);
   return res.body;
@@ -86,7 +94,7 @@ async function addOutcome(data: IMessage) {
   data.reply(`${res.status}: ${res.message}.`);
 }
 
-async function parseMessage(msg) {
+export async function parseMessage(msg) {
   const splitted = msg.split(' ').splice(1);
   const period = {};
   const vals = ['d', 'm', 'y'];
@@ -140,7 +148,7 @@ async function parseMessage(msg) {
   return false;
 }
 
-async function postRequest(path, data) {
+export async function postRequest(path, data) {
   try {
     const result = await request
       .post(path)
@@ -162,7 +170,7 @@ async function getStats(data: IMessage) {
     data.reply(`ERROR:\nCannot parse data from message.`);
     return false;
   }
-  const res = await postRequest(`${config.url}/stats/get`, { period, name: username });
+  const res = await postRequest(`${API_URL}/stats/get`, { period, name: username });
   if (res.status === 'ERROR') {
     return data.reply(`${res.status}res.status: ${res.message}`);
   }
